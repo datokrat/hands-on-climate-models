@@ -1,13 +1,10 @@
 (ns property-editor
-  (:require state item)
-  (:import
-   [io.github.humbleui.types Rect]))
+  (:require state item rect))
 
 (def clip-rect
-  (Rect/makeLTRB 800 0 1000 600))
+  (rect/ltrb 800 0 1000 600))
 
 (def pos1 {:x 800 :y 20})
-
 (def pos2 {:x 800 :y 60})
 
 (def rect1
@@ -21,13 +18,13 @@
   (when (.contains clip-rect x y)
     true))
 
-(defn on-press
-  [state x y]
-  (or
-   (when (.contains rect1 x y)
-     :x)
-   (when (.contains rect2 x y)
-     :y)))
+(comment (defn on-press
+   [state x y]
+   (or
+    (when (.contains rect1 x y)
+      :x)
+    (when (.contains rect2 x y)
+      :y))))
 
 (defn sprites
   [state]
@@ -35,7 +32,7 @@
     (list
      {:type :text
       :pos pos1
-      :text (str "x: " (-> state state/selection item/get-x))}
+      :text (str "x: " (-> state state/selected-item item/get-x))}
      {:type :text
       :pos pos2
-      :text (str "y: " (-> state state/selection item/get-y))})))
+      :text (str "y: " (-> state state/selected-item item/get-y))})))

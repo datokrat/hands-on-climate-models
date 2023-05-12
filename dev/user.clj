@@ -2,6 +2,7 @@
   (:require
    state collage scene item
    [nrepl.cmdline :as nrepl])
+  (:use util)
   (:import
    [io.github.humbleui.types Rect]
    [io.github.humbleui.jwm App EventMouseMove EventMouseButton]
@@ -132,15 +133,16 @@
   [event]
   (let [x (.getX event)
         y (.getY event)]
-    (when-let [[type object] (and (-> state :dragging not) (collage/object-under-pos state x y))]
+    (if-let [[type object] (collage/object-under-pos state x y)]
       (case type
-        :tool (def state (state/create-and-drag-item state object x y))
-        :item (def state (state/grab state object))
-        nil))))
+        :tool (def state (state/grab-tool state object x y))
+        :item (def state (state/grab state object)))
+      (def state (state/deselect state)))
+    (request-frame)))
 
 (defn on-release
   [event]
-  (def state (state/release state))
+  (def state (state/mouse-released state))
   (request-frame))
 
 (defn on-button

@@ -1,47 +1,78 @@
 (ns state
   (:require scene item))
 
+;; some planning
+
+#_ "
+Focus state:
+-> Idle
+-> Dragging
+-> Input (either property or variable editor)
+
+Timeline state: a number
+-> if zero: drag-n-drop allowed (or should the t=0 scene be shown like 'ghosts' that can be manipulated?)
+
+Scene editor state:
+-> Idle
+-> Selection
+   -> Idle
+   -> Dragging
+
+Property editor state (parallel state during Selection):
+-> Idle
+-> Show
+-> Input new variable name
+-> Input expression or number
+
+Variable editor state:
+-> Idle
+-> Input expression or number
+"
+
 (def clip-rect
   {:left 0 :right 800
    :top 100 :bottom 600})
 
 (defn initial []
-  {:scene (scene/initial)
-   :dragging nil
-   :selection nil
+  {:type :scene
+   :data (scene/initial)
    :mouse {:x 0 :y 0}})
 
+(defn state-type [state]
+  (:type state))
+
+(defmulti get-scene state-type)
+
+(defmulti update-scene (fn [state f] (state-type state)))
+
+(defmulti set-scene (fn [state scene] (state-type state)))
+
+(defmulti selection state-type)
+
+(defmulti can-abort-transaction? state-type)
+
+(defmulti abort-transaction state-type)
+
+(defmulti deselect state-type)
+
+(defmulti create-and-drag-item (fn [state _ _ _] (state-type state)))
+
+(defmulti start-dragging (fn [state id] (state-type state)))
+
 (defn get-item [state id]
-  (-> state :scene (scene/get-item id)))
+  (-> state get-scene (scene/get-item id)))
 
-(defn dragged-item [state]
-  (get-item state (:dragging state)))
-
-(defn selection [state]
-  (get-item state (:selection state)))
+(defn selected-item [state]
+  (some->> state selection (get-item state)))
 
 (defn items [state]
-  (-> state :scene :items))
-
-(defn new-id [state]
-  (let [state' (update state :next-id inc)]
-    [(:next-id state) state']))
-
-(defn item [id x y]
-  {:id id :x x :y y})
-
-(defn clamp [x l u]
-  (-> x (max l) (min u)))
-
-(defn move [item x y]
-  (let [x (clamp x (:left clip-rect) (:right clip-rect))
-        y (clamp y (:top clip-rect) (:bottom clip-rect))]
-    (item/move-to item x y)))
-
-(defn select [state id]
-  (assoc state :selection id))
+  (-> state get-scene scene/get-items))
 
 (defmulti make-item (fn [type x y] type))
+
+(defmulti mouse-moved-to-scene-pos (fn [state x y] (state-type state)))
+
+(defmulti mouse-released state-type)
 
 (defmethod make-item :sun [_ x y]
   (item/sun x y 100))
@@ -51,30 +82,146 @@
 
 (defn create-item [state item-type x y]
   (let [item (make-item item-type x y)
-        [id scene] (-> state :scene (scene/add-new-item item))]
-    [id (assoc state :scene scene)]))
+        [id scene] (-> state get-scene (scene/add-new-item item))]
+    [id (set-scene state scene)]))
 
-(defn create-and-drag-item [state item-type x y]
-  (let [[id state] (create-item state item-type x y)]
-    (assoc state :dragging id)))
+(defn create-and-drag-item [state tool x y]
+  (let [[id state] (create-item state tool x y)]
+    (start-dragging state id)))
 
-(defn drag-to [state x y]
-  (if-let [dragged-id (:dragging state)]
-    (let [update-item #(move % x y)
-          update-scene #(scene/update-item % dragged-id update-item)]
-      (update state :scene update-scene))
-    state))
+(defn can-grab-tool? [state]
+  (can-abort-transaction? state))
+
+(defn grab-tool [state tool x y]
+  (when (can-abort-transaction? state)
+    (-> state
+        abort-transaction
+        (create-and-drag-item tool x y))))
+
+(defn can-grab? [state]
+  (can-abort-transaction? state))
+
+(defn grab [state id]
+  (when (can-grab? state)
+    (-> state
+        abort-transaction
+        (start-dragging id))))
 
 (defn move-mouse [state x y]
   (-> state
-      (drag-to x y)
-      (assoc-in [:mouse :x] x)
-      (assoc-in [:mouse :y] y)))
+      (assoc :mouse {:x x :y y})
+      (mouse-moved-to-scene-pos x y)))
 
-(defn grab [state id]
-  (assoc state :dragging id))
+;; scene
 
-(defn release [state]
-  (-> state
-      (assoc :selection (:dragging state))
-      (assoc :dragging nil)))
+(defmethod get-scene :scene [state]
+  (:data state))
+
+(defmethod set-scene :scene [state scene]
+  (assoc state :data scene))
+
+(defmethod selection :scene [state]
+  nil)
+
+(defmethod deselect :scene [state]
+  state)
+
+(defmethod can-abort-transaction? :scene [state]
+  true)
+
+(defmethod abort-transaction :scene [state]
+  state)
+
+(defmethod start-dragging :scene [state id]
+  (assoc state
+         :type :dragging
+         :data {:scene (get-scene state)
+                :dragging id}))
+
+(defmethod mouse-moved-to-scene-pos :scene [state x y]
+  state)
+
+(defmethod mouse-released :scene [state]
+  state)
+
+;; selection
+
+(defmethod get-scene :selection [state]
+  (get-in state [:data :scene]))
+
+(defmethod set-scene :selection [state scene]
+  ;; TODO: What should happen if the selected item is removed?
+  (assoc-in state [:data :scene] scene))
+
+(defmethod selection :selection [state]
+  (get-in state [:data :selection]))
+
+(defmethod deselect :selection [state]
+  (assoc state
+         :type :scene
+         :data (get-scene state)))
+
+(defmethod can-abort-transaction? :selection [state]
+  true)
+
+(defmethod abort-transaction :selection [state]
+  state)
+
+(defmethod start-dragging :selection [state id]
+  (assoc state
+         :type :dragging
+         :data {:scene (get-scene state)
+                :dragging id}))
+
+(defmethod mouse-moved-to-scene-pos :selection [state x y]
+  state)
+
+(defmethod mouse-released :selection [state]
+  state)
+
+;; dragging
+
+(defmethod get-scene :dragging [state]
+  (get-in state [:data :scene]))
+
+(defmethod set-scene :dragging [state scene]
+  ;; TODO: What should happen if the selected item is removed?
+  (assoc-in state [:data :scene] scene))
+
+(defmethod update-scene :dragging [state f]
+  ;; TODO: What if the selected item is removed?
+  (update-in state [:data :scene] f))
+
+(defmethod selection :dragging [state]
+  (get-in state [:data :dragging]))
+
+(defmethod selection :deselect [state]
+  (assoc state
+         :type :scene
+         :data (get-scene state)))
+
+(defmethod can-abort-transaction? :dragging [state]
+  true)
+
+(defmethod abort-transaction :dragging [state]
+  (assoc state
+         :type :selection
+         :data {:scene (get-scene state)
+                :selection (selection state)}))
+
+(defn clamp [x l u]
+  (-> x (max l) (min u)))
+
+(defn move [item x y]
+  (let [x (clamp x (:left clip-rect) (:right clip-rect))
+        y (clamp y (:top clip-rect) (:bottom clip-rect))]
+    (item/move-to item x y)))
+
+(defmethod mouse-moved-to-scene-pos :dragging [state x y]
+  (let [dragged-id (selection state)
+        update-item-fn #(move % x y)
+        update-scene-fn #(scene/update-item % dragged-id update-item-fn)]
+    (update-scene state update-scene-fn)))
+
+(defmethod mouse-released :dragging [state]
+  (abort-transaction state))

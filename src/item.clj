@@ -1,7 +1,6 @@
 (ns item
   (:require rect)
-  (:import
-   [io.github.humbleui.types Rect]))
+  (:use util))
 
 (defn type [item]
   (first item))
@@ -53,10 +52,6 @@
 (defn item->point [item]
   {:x (get-x item)
    :y (get-y item)})
-
-(defmacro defmethods [multifn dispatch-vals & fn-tail]
-  `(doseq [dispatch-val# ~dispatch-vals]
-     (defmethod ~multifn dispatch-val# ~@fn-tail)))
 
 (defmethods in-range? celestials [item point]
   (let [sqdist (square-distance (item->point item) point)

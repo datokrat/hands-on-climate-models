@@ -2,10 +2,14 @@
 
 (defn initial []
   {:items (sorted-map)
+   :variables (sorted-map)
    :next-id 0})
 
+(defn get-items [scene]
+  (:items scene))
+
 (defn get-item [scene id]
-  (get-in scene [:items id]))
+  (-> scene get-items (get id)))
 
 (defn item
   [x y]
@@ -18,6 +22,11 @@
      (-> scene
          (update :next-id inc)
          (assoc-in [:items id] data))]))
+
+(defn add-new-variable
+  [scene name variable]
+  (-> scene
+      (assoc-in [:variables name] variable)))
 
 (defn change-item
   [state id data]
