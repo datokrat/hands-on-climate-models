@@ -1,6 +1,5 @@
 (ns property-editor
-  (:require
-   state)
+  (:require state item)
   (:import
    [io.github.humbleui.types Rect]))
 
@@ -36,7 +35,7 @@
     (list
      {:type :text
       :pos pos1
-      :text (str "x: " (-> state state/selection :x))}
+      :text (str "x: " (-> state state/selection item/get-x))}
      {:type :text
       :pos pos2
-      :text (str "y: " (-> state state/selection :y))})))
+      :text (str "y: " (-> state state/selection item/get-y))})))

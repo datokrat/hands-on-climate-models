@@ -1,24 +1,27 @@
-(ns state)
+(ns state
+  (:require scene item))
 
 (def clip-rect
   {:left 0 :right 800
-   :bottom 100 :top 600})
+   :top 100 :bottom 600})
 
 (defn initial []
-  {:items (sorted-map)
+  {:scene (scene/initial)
    :dragging nil
-   :next-id 0
+   :selection nil
    :mouse {:x 0 :y 0}})
 
+(defn get-item [state id]
+  (-> state :scene (scene/get-item id)))
+
 (defn dragged-item [state]
-  (get-in state [:items (:dragging state)]))
+  (get-item state (:dragging state)))
 
 (defn selection [state]
-  (let [id (:selection state)]
-    (get-in state [:items id])))
+  (get-item state (:selection state)))
 
 (defn items [state]
-  (:items state))
+  (-> state :scene :items))
 
 (defn new-id [state]
   (let [state' (update state :next-id inc)]
@@ -31,25 +34,35 @@
   (-> x (max l) (min u)))
 
 (defn move [item x y]
-  (-> item (assoc :x (clamp x (:left clip-rect) (:right clip-rect))) (assoc :y (clamp y (:bottom clip-rect) (:top clip-rect)))))
+  (let [x (clamp x (:left clip-rect) (:right clip-rect))
+        y (clamp y (:top clip-rect) (:bottom clip-rect))]
+    (item/move-to item x y)))
 
 (defn select [state id]
   (assoc state :selection id))
 
-(defn create-item [state x y]
-  (let [[id state] (new-id state)
-        new-item (item id x y)
-        state (assoc-in state [:items id] new-item)]
-    [id state]))
+(defmulti make-item (fn [type x y] type))
 
-(defn create-and-drag-item [state x y]
-  (let [[id state] (create-item state x y)
-        state (assoc state :dragging id)]
-    state))
+(defmethod make-item :sun [_ x y]
+  (item/sun x y 100))
+
+(defmethod make-item :earth [_ x y]
+  (item/earth x y 75))
+
+(defn create-item [state item-type x y]
+  (let [item (make-item item-type x y)
+        [id scene] (-> state :scene (scene/add-new-item item))]
+    [id (assoc state :scene scene)]))
+
+(defn create-and-drag-item [state item-type x y]
+  (let [[id state] (create-item state item-type x y)]
+    (assoc state :dragging id)))
 
 (defn drag-to [state x y]
-  (if (:dragging state)
-    (update-in state [:items (:dragging state)] #(move % x y))
+  (if-let [dragged-id (:dragging state)]
+    (let [update-item #(move % x y)
+          update-scene #(scene/update-item % dragged-id update-item)]
+      (update state :scene update-scene))
     state))
 
 (defn move-mouse [state x y]

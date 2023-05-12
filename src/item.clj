@@ -1,10 +1,7 @@
-(ns item)
-
-(defn sun [x y r]
-  [:sun {:x x :y y :radius r}])
-
-(defn radius [sun-item]
-  (get-in sun-item [1 :radius]))
+(ns item
+  (:require rect)
+  (:import
+   [io.github.humbleui.types Rect]))
 
 (defn type [item]
   (first item))
@@ -12,9 +9,17 @@
 (defn move-to [item x y]
   (update item 1 #(into % {:x x :y y})))
 
+(defn get-x [item]
+  (-> item second :x))
+
+(defn get-y [item]
+  (-> item second :y))
+
 ;; interface
 
 (defmulti in-range? (fn [item point] (type item)))
+
+(defmulti bounding-box type)
 
 (defmulti properties-for-type identity)
 
@@ -23,23 +28,48 @@
 
 (defmulti assoc-property (fn [item key value] (type item)))
 
+;; sun, earth
+
+(def celestials [:sun, :earth])
+
+(defn sun [x y r]
+  [:sun {:x x :y y :radius r}])
+
+(defn earth [x y r]
+  [:earth {:x x :y y :radius r}])
+
+(def planet-rect
+  (rect/ltrb -100 -100 100 100))
+
+(defn radius [planet]
+  (get-in planet [1 :radius]))
+
 (defn square-distance [p1 p2]
   (let [dx (- (:x p1) (:x p2))
         dy (- (:y p1) (:y p2))]
     (+ (* dx dx)
        (* dy dy))))
 
-;; sun
+(defn item->point [item]
+  {:x (get-x item)
+   :y (get-y item)})
 
-(defmethod in-range? :sun in-range-of-sun? [item point]
-  (let [sqdist (square-distance item point)
+(defmacro defmethods [multifn dispatch-vals & fn-tail]
+  `(doseq [dispatch-val# ~dispatch-vals]
+     (defmethod ~multifn dispatch-val# ~@fn-tail)))
+
+(defmethods in-range? celestials [item point]
+  (let [sqdist (square-distance (item->point item) point)
         item-radius (radius item)]
     (<= sqdist (* item-radius item-radius))))
 
-(defmethod properties-for-type :sun sun-properties [_]
+(defmethods bounding-box celestials [item]
+  (-> item radius (* 2) rect/centered-square (rect/offset (get-x item) (get-y item))))
+
+(defmethods properties-for-type celestials [_]
   [:x :y :radius])
 
-(defmethod assoc-property :sun assoc-sun-property
+(defmethods assoc-property celestials
   [item key value]
   (assoc-in item [1 key] value))
 

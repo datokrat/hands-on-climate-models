@@ -1,40 +1,47 @@
 (ns collage
   (:require
-   state
+   state rect
    property-editor)
   (:import
    [io.github.humbleui.types Rect]))
 
-(def sprite-rect
-  (Rect/makeXYWH -100 -100 200 200))
+(def tools
+  [:sun :earth])
 
 (defn item-rect
   [state id]
-  (let [{:keys [x y]} (get-in state [:items id])]
-    (.offset sprite-rect x y)))
+  (-> state
+      (state/get-item id)
+      (item/bounding-box)))
 
-(defn tool-rect []
-  (-> sprite-rect
-      (.offset 100 100)
-      (.scale 0.5)))
+(defn tool-offset [tool]
+  (case tool
+    :sun [50 50]
+    :earth [150 50]))
 
-(defn contains
-  [rect x y]
-  (.contains rect x y))
+(defn tool-rect-scaled [tool scale]
+  (as-> (rect/centered-square 100) $
+    (rect/scale $ scale)
+    (apply rect/offset $ (tool-offset tool))))
+
+(defn tool-rect [tool]
+  (tool-rect-scaled tool 1))
 
 (defn item-under-pos
   [state x y]
   (->> state
-      state/items
-      reverse
-      keys
-      (filter #(contains (item-rect state %) x y))
-      first))
+       state/items
+       reverse
+       keys
+       ;;(filter #(-> state (item-rect %) (.contains x y)))
+       (filter #(-> state (state/get-item %) (item/in-range? {:x x :y y})))
+       first))
 
 (defn tool-under-pos
   [state x y]
-  (when (contains (tool-rect) x y)
-    {}))
+  (->> tools reverse
+       (filter #(-> % tool-rect (.contains x y)))
+       first))
 
 (defn object-under-pos
   [state x y]
@@ -55,9 +62,10 @@
     false))
 
 (defn tool-hovered?
-  [under-pos]
+  [under-pos tool]
   (if-let [[type object] under-pos]
-    (= type :tool)
+    (and (= type :tool)
+     (= object tool))
     false))
 
 (defn sprites
@@ -65,11 +73,14 @@
   (let [under-pos (object-under-pos state x y)]
      (concat
       (->> state
-           :items
-           (map second)
+           state/items
            (map #(hash-map :type :item
-                           :item %
-                           :hovered? (item-hovered? under-pos (:id %)))))
+                           :item (second %)
+                           :hovered? (item-hovered? under-pos (first %)))))
       (list {:type :tool
-        :hovered? (tool-hovered? under-pos)})
+             :tool :sun
+             :hovered? (tool-hovered? under-pos :sun)}
+            {:type :tool
+             :tool :earth
+             :hovered? (tool-hovered? under-pos :earth)})
       (property-editor/sprites state))))

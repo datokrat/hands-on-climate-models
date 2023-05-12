@@ -4,16 +4,20 @@
   {:items (sorted-map)
    :next-id 0})
 
-(defn item-data
+(defn get-item [scene id]
+  (get-in scene [:items id]))
+
+(defn item
   [x y]
   {:x x :y y})
 
 (defn add-new-item
-  [state data]
-  (let [id (:next-id state)]
-    (-> state
-        (update :next-id inc)
-        (assoc-in [:items id] data))))
+  [scene data]
+  (let [id (:next-id scene)]
+    [id
+     (-> scene
+         (update :next-id inc)
+         (assoc-in [:items id] data))]))
 
 (defn change-item
   [state id data]
