@@ -84,15 +84,15 @@
   (.drawImageRect canvas (type->sprite tool) (collage/tool-rect-scaled
                                               tool (if hovered? 1.2 1))))
 
-(defmulti draw-item (fn [canvas item hovered?] (item/type item)))
+(defmulti draw-item (fn [canvas item hovered? frame-data] (item/type item)))
 
 (defmethod draw-item :sun
-  [canvas item hovered?]
-  (.drawImageRect canvas sun-sprite (item/bounding-box item)))
+  [canvas item hovered? frame-data]
+  (.drawImageRect canvas sun-sprite (item/bounding-box item frame-data)))
 
 (defmethod draw-item :earth
-  [canvas item hovered?]
-  (.drawImageRect canvas earth-sprite (item/bounding-box item)))
+  [canvas item hovered? frame-data]
+  (.drawImageRect canvas earth-sprite (item/bounding-box item frame-data)))
 
 (def font-mgr (FontMgr/getDefault))
 (def typeface (.matchFamilyStyle font-mgr "Liberation Sans" FontStyle/NORMAL))
@@ -109,36 +109,58 @@
                  fill)))
 
 (defn draw-object
-  [canvas object]
+  [canvas object frame]
   (case (:type object)
     :tool (draw-toolbar canvas (:tool object) (:hovered? object))
-    :item (draw-item canvas (:item object) (:hovered? object))
+    :item (draw-item canvas (:item object) (:hovered? object) (get frame (:id object)))
     :text (draw-text canvas object)))
+
+(defn draw-time-slider
+  [canvas]
+  (let [t (-> state state/get-scene scene/get-time)
+        x (+ 100 (* t 50))
+        knob-rect (rect/offset (rect/centered-square 30) x 655)]
+    (with-open [fill (Paint.)]
+      (.setColor fill (unchecked-int 0xFFCCCCCC))
+      (.drawRect canvas (rect/ltrb 100 650 600 660) fill)
+      (.setColor fill (unchecked-int 0xFFFF0000))
+      (.drawOval canvas knob-rect fill))))
 
 (defn on-paint
   [event]
   (let [canvas (-> event .getSurface .getCanvas)
         {:keys [x y]} (:mouse state)
-        objects (collage/sprites state x y)]
-    (.clear canvas (unchecked-int 0xFFFFFFFF))
+        objects (collage/sprites state x y)
+        frame (-> state state/get-scene scene/get-frame)]
+    (.clear canvas (unchecked-int 0xFFEEEEEE))
+    (with-open [fill (Paint.)]
+      (.setColor fill (unchecked-int 0xFFFFFFFF))
+      (.drawRect canvas state/clip-rect2 fill))
     (doseq [object objects]
-      (draw-object canvas object))))
+      (draw-object canvas object frame))
+    (draw-time-slider canvas)))
 
 (defn on-move
   [event]
   (def state (state/move-mouse state (.getX event) (.getY event)))
   (request-frame))
 
+(defn on-press-time-slider [event]
+  (when (.contains (rect/ltrb 100 650 600 660) (.getX event) (.getY event))
+    (state/update-scene state #(scene/set-time % (/ (- (.getX event) 100) 50)))))
+
 (defn on-press
   [event]
   (let [x (.getX event)
         y (.getY event)]
-    (if-let [[type object] (collage/object-under-pos state x y)]
-      (case type
-        :tool (def state (state/grab-tool state object x y))
-        :item (def state (state/grab state object)))
-      (def state (state/deselect state)))
-    (request-frame)))
+       (if-let [[type object] (collage/object-under-pos state x y)]
+         (case type
+           :tool (def state (state/grab-tool state object x y))
+           :item (def state (state/grab state object))
+           :property-editor nil)
+         (def state (or (on-press-time-slider event)
+                        (state/deselect state))))
+       (request-frame)))
 
 (defn on-release
   [event]

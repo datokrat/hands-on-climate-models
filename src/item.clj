@@ -18,7 +18,7 @@
 
 (defmulti in-range? (fn [item point] (type item)))
 
-(defmulti bounding-box type)
+(defmulti bounding-box (fn [item frame-data] (type item)))
 
 (defmulti properties-for-type identity)
 
@@ -58,8 +58,10 @@
         item-radius (radius item)]
     (<= sqdist (* item-radius item-radius))))
 
-(defmethods bounding-box celestials [item]
-  (-> item radius (* 2) rect/centered-square (rect/offset (get-x item) (get-y item))))
+(defmethods bounding-box celestials [item frame-data]
+  (let [x (:x frame-data)
+        y (:y frame-data)]
+    (-> item radius (* 2) rect/centered-square (rect/offset x y))))
 
 (defmethods properties-for-type celestials [_]
   [:x :y :radius])

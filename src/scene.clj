@@ -3,10 +3,21 @@
 (defn initial []
   {:items (sorted-map)
    :variables (sorted-map)
-   :next-id 0})
+   :next-id 0
+   :time 0})
 
 (defn get-items [scene]
   (:items scene))
+
+(defn get-frame-at [scene t]
+  (->> scene get-items
+      (map (fn [[id item]]
+             [id {:x (+ (* 5 t) (item/get-x item))
+                  :y (item/get-y item)}]))
+      (into (sorted-map))))
+
+(defn get-frame [scene]
+  (get-frame-at scene (:time scene)))
 
 (defn get-item [scene id]
   (-> scene get-items (get id)))
@@ -43,3 +54,12 @@
 (defn move-item
   [data x y]
   (into data {:x x :y y}))
+
+(defn get-time [scene]
+  (:time scene))
+
+(defn set-time [scene t]
+  (assoc scene :time t))
+
+(defn is-at-start [scene]
+  (-> scene get-time (= 0)))

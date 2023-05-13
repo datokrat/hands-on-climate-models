@@ -1,5 +1,5 @@
 (ns state
-  (:require scene item))
+  (:require scene item rect))
 
 ;; some planning
 
@@ -33,6 +33,9 @@ Variable editor state:
   {:left 0 :right 800
    :top 100 :bottom 600})
 
+(def clip-rect2
+  (rect/ltrb 0 100 800 600))
+
 (defn initial []
   {:type :scene
    :data (scene/initial)
@@ -46,6 +49,9 @@ Variable editor state:
 (defmulti update-scene (fn [state f] (state-type state)))
 
 (defmulti set-scene (fn [state scene] (state-type state)))
+
+(defn update-scene [state f]
+  (set-scene state (f (get-scene state))))
 
 (defmulti selection state-type)
 
@@ -188,10 +194,6 @@ Variable editor state:
   ;; TODO: What should happen if the selected item is removed?
   (assoc-in state [:data :scene] scene))
 
-(defmethod update-scene :dragging [state f]
-  ;; TODO: What if the selected item is removed?
-  (update-in state [:data :scene] f))
-
 (defmethod selection :dragging [state]
   (get-in state [:data :dragging]))
 
@@ -218,10 +220,12 @@ Variable editor state:
     (item/move-to item x y)))
 
 (defmethod mouse-moved-to-scene-pos :dragging [state x y]
-  (let [dragged-id (selection state)
-        update-item-fn #(move % x y)
-        update-scene-fn #(scene/update-item % dragged-id update-item-fn)]
-    (update-scene state update-scene-fn)))
+  (if-not (-> state get-scene scene/is-at-start)
+    state
+    (let [dragged-id (selection state)
+          update-item-fn #(move % x y)
+          update-scene-fn #(scene/update-item % dragged-id update-item-fn)]
+      (update-scene state update-scene-fn))))
 
 (defmethod mouse-released :dragging [state]
   (abort-transaction state))

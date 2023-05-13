@@ -75,6 +75,7 @@
       (->> state
            state/items
            (map #(hash-map :type :item
+                           :id (first %)
                            :item (second %)
                            :hovered? (item-hovered? under-pos (first %)))))
       (list {:type :tool
