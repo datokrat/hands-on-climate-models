@@ -141,13 +141,13 @@
   [event]
   (let [x (.getX event)
         y (.getY event)]
-       (if-let [[type object] (collage/object-under-pos state x y)]
-         (case type
-           :tool (def state (state/grab-tool state object x y))
-           :item (def state (state/grab state object))
-           :property-editor nil)
-         (def state (or (on-press-time-slider event)
-                        (state/deselect state))))
+    (if-let [[type object] (collage/object-under-pos state x y)]
+      (case type
+        :tool (def state (state/grab-tool state object x y))
+        :item (def state (state/grab state object))
+        :property-editor nil)
+      (def state (or (on-press-time-slider event)
+                     (state/deselect state))))
        (request-frame)))
 
 (defn on-release

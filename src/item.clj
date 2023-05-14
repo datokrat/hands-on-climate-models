@@ -5,14 +5,18 @@
 (defn type [item]
   (first item))
 
-(defn move-to [item x y]
-  (update item 1 #(into % {:x x :y y})))
+(comment (defn move-to [item x y]
+   (update item 1 #(into % {:x x :y y}))))
 
 (defn get-x [item]
   (-> item second :x))
 
 (defn get-y [item]
   (-> item second :y))
+
+(defn value [value]
+  {:type :value
+   :value value})
 
 ;; interface
 
@@ -24,6 +28,8 @@
 
 (defn properties [item]
   (-> item type properties-for-type))
+
+(defmulti get-property (fn [item key] (type item)))
 
 (defmulti assoc-property (fn [item key value] (type item)))
 
@@ -70,6 +76,10 @@
 (defmethods assoc-property celestials
   [item key value]
   (assoc-in item [1 key] value))
+
+(defmethods get-property celestials
+  [item key]
+  (get-in item [1 key]))
 
 (comment
   (assoc-property (sun 0 0 0) :x 1)

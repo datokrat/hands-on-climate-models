@@ -76,15 +76,15 @@ Variable editor state:
 
 (defmulti make-item (fn [type x y] type))
 
+(defmethod make-item :sun [_ x y]
+  (item/sun (item/value x) (item/value y) (item/value 100)))
+
+(defmethod make-item :earth [_ x y]
+  (item/earth (item/value x) (item/value y) (item/value 75)))
+
 (defmulti mouse-moved-to-scene-pos (fn [state x y] (state-type state)))
 
 (defmulti mouse-released state-type)
-
-(defmethod make-item :sun [_ x y]
-  (item/sun x y 100))
-
-(defmethod make-item :earth [_ x y]
-  (item/earth x y 75))
 
 (defn create-item [state item-type x y]
   (let [item (make-item item-type x y)
@@ -214,18 +214,25 @@ Variable editor state:
 (defn clamp [x l u]
   (-> x (max l) (min u)))
 
-(defn move [item x y]
-  (let [x (clamp x (:left clip-rect) (:right clip-rect))
-        y (clamp y (:top clip-rect) (:bottom clip-rect))]
-    (item/move-to item x y)))
+(defn clamp-x [x]
+  (clamp x (:left clip-rect) (:right clip-rect)))
+
+(defn clamp-y [y]
+  (clamp y (:top clip-rect) (:bottom clip-rect)))
+
+(comment (defn move [item x y]
+           (let [x (clamp x (:left clip-rect) (:right clip-rect))
+                 y (clamp y (:top clip-rect) (:bottom clip-rect))]
+             (item/move-to item x y))))
 
 (defmethod mouse-moved-to-scene-pos :dragging [state x y]
   (if-not (-> state get-scene scene/is-at-start)
     state
-    (let [dragged-id (selection state)
-          update-item-fn #(move % x y)
-          update-scene-fn #(scene/update-item % dragged-id update-item-fn)]
-      (update-scene state update-scene-fn))))
+    (let [dragged-id (selection state)]
+      (set-scene state
+                 (-> state state/get-scene
+                    (scene/set-property-if-possible dragged-id :x (clamp-x x))
+                    (scene/set-property-if-possible dragged-id :y (clamp-y y)))))))
 
 (defmethod mouse-released :dragging [state]
   (abort-transaction state))

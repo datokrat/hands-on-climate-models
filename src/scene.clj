@@ -1,5 +1,5 @@
 (ns scene
-  (:require item frame))
+  (:require item frame variable))
 
 (defn initial []
   {:items (sorted-map)
@@ -81,6 +81,19 @@
   (-> scene
       (assoc-in [:variables name] variable)))
 
+(defn get-variable
+  [scene name]
+  (get-in scene [:variables name]))
+
+(defn set-variable
+  [scene name variable]
+  (-> scene
+      (assoc-in [:variables name] variable)))
+
+(defn update-variable
+  [scene name f]
+  (set-variable scene name (f (get-variable scene name))))
+
 (defn change-item
   [state id data]
   (assoc-in state [:items id] data))
@@ -105,3 +118,19 @@
 
 (defn is-at-start [scene]
   (-> scene get-time (= 0)))
+
+(defn assign-variable-if-possible [variable value]
+  (case (:type variable)
+    :dependent (variable/make value)
+    :differential (variable/make-differential value (:change variable))))
+
+(defn set-property-if-possible [scene item-id propkey value]
+  (let [item (-> scene (scene/get-item item-id))
+        prop (item/get-property item propkey)]
+    (case (:type prop)
+      :value (scene/update-item
+              scene item-id
+              #(item/assoc-property % propkey (item/value value)))
+      :variable (scene/update-variable
+                 scene (:variable prop)
+                 #(assign-variable-if-possible % value)))))
