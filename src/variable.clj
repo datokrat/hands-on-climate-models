@@ -1,7 +1,13 @@
 (ns variable)
 
 (defn make [value]
-  value)
+  {:type :dependent
+   :value value})
+
+(defn make-differential [initial change]
+  {:type :differential
+   :initial initial
+   :change change})
 
 (defn set [variable value]
   value)

@@ -29,13 +29,20 @@
 
 (defn item-under-pos
   [state x y]
-  (->> state
-       state/items
-       reverse
-       keys
-       ;;(filter #(-> state (item-rect %) (.contains x y)))
-       (filter #(-> state (state/get-item %) (item/in-range? {:x x :y y})))
-       first))
+  (let [propframe (-> state state/get-scene scene/get-frame frame/props)]
+    (->> propframe reverse keys
+         (filter #(-> state (state/get-item %)
+                      (item/in-range? {:x x :y y} (get propframe %))))
+         first))
+  (comment (->> state
+        state/get-scene
+        scene/get-frame
+        frame/props
+        reverse
+        keys
+        ;;(filter #(-> state (item-rect %) (.contains x y)))
+        (filter #(-> state (state/get-item %) (item/in-range? {:x x :y y})))
+        first)))
 
 (defn tool-under-pos
   [state x y]

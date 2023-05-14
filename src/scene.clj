@@ -9,12 +9,53 @@
 (defn get-items [scene]
   (:items scene))
 
-(defn get-frame-at [scene t]
+(defn get-variables [scene]
+  (:variables scene))
+
+(defn eval-initial-variable [name variable]
+  (case (:type variable)
+    :dependent (:value variable)
+    :differential (:initial variable)))
+
+(defn eval-consecutive-variable [last-value name variable]
+  (case (:type variable)
+    :dependent (:value variable)
+    :differential (+ last-value (:change variable))))
+
+(defn get-initial-varframe [scene]
+  (->> scene get-variables
+         (map (fn [[name variable]]
+                [name (eval-initial-variable name variable)]))
+         (into (sorted-map))))
+
+(defn get-next-varframe [scene frame]
+  (->> scene get-variables
+       (map (fn [[name variable]]
+              [name (eval-consecutive-variable (get frame name) name variable)]))
+       (into (sorted-map))))
+
+(defn get-varframe-at [scene t]
+  (-> #(get-next-varframe scene %)
+      (iterate (get-initial-varframe scene))
+      (nth t)))
+
+(defn eval-prop [prop varframe]
+  (case (:type prop)
+    :value (:value prop)
+    :variable (get varframe (:variable prop))))
+
+(defn get-propframe-at [scene t varframe]
   (->> scene get-items
-      (map (fn [[id item]]
-             [id {:x (+ (* 5 t) (item/get-x item))
-                  :y (item/get-y item)}]))
-      (into (sorted-map))))
+       (map (fn [[id item]]
+              [id {:x (eval-prop (item/get-x item) varframe)
+                   :y (eval-prop (item/get-y item) varframe)
+                   :radius (eval-prop (item/radius item) varframe)}]))
+       (into (sorted-map))))
+
+(defn get-frame-at [scene t]
+  (let [varframe (get-varframe-at scene t)
+        propframe (get-propframe-at scene t varframe)]
+    (frame/make propframe varframe)))
 
 (defn get-frame [scene]
   (get-frame-at scene (:time scene)))

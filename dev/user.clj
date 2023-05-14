@@ -1,6 +1,7 @@
 (ns user
   (:require
-   state collage scene item
+   state collage scene item text
+   [clojure.math :as math]
    [nrepl.cmdline :as nrepl])
   (:use util)
   (:import
@@ -94,26 +95,12 @@
   [canvas item hovered? frame-data]
   (.drawImageRect canvas earth-sprite (item/bounding-box item frame-data)))
 
-(def font-mgr (FontMgr/getDefault))
-(def typeface (.matchFamilyStyle font-mgr "Liberation Sans" FontStyle/NORMAL))
-(def font (Font. typeface (float 20)))
-
-(defn draw-text
-  [canvas object]
-  (with-open [fill (Paint.)]
-    (.drawString canvas
-                 (-> object :text)
-                 (-> object :pos :x)
-                 (-> object :pos :y)
-                 font
-                 fill)))
-
 (defn draw-object
   [canvas object frame]
   (case (:type object)
     :tool (draw-toolbar canvas (:tool object) (:hovered? object))
     :item (draw-item canvas (:item object) (:hovered? object) (get frame (:id object)))
-    :text (draw-text canvas object)))
+    :text (text/draw-text canvas object)))
 
 (defn draw-time-slider
   [canvas]
@@ -137,7 +124,8 @@
       (.setColor fill (unchecked-int 0xFFFFFFFF))
       (.drawRect canvas state/clip-rect2 fill))
     (doseq [object objects]
-      (draw-object canvas object frame))
+      (draw-object canvas object (frame/props frame)))
+    (property-editor/draw-property-editor canvas state)
     (draw-time-slider canvas)))
 
 (defn on-move
@@ -147,7 +135,7 @@
 
 (defn on-press-time-slider [event]
   (when (.contains (rect/ltrb 100 650 600 660) (.getX event) (.getY event))
-    (state/update-scene state #(scene/set-time % (/ (- (.getX event) 100) 50)))))
+    (state/update-scene state #(scene/set-time % (math/floor-div (- (.getX event) 100) 50)))))
 
 (defn on-press
   [event]
