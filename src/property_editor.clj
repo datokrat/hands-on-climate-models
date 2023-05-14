@@ -9,10 +9,10 @@
 (def var-pos {:x 800 :y 100})
 
 (def rect1
-  (Rect/makeLTRB 800 0 1000 20))
+  (rect/ltrb 800 0 1000 20))
 
 (def rect2
-  (Rect/makeLTRB 800 40 1000 60))
+  (rect/ltrb 800 40 1000 60))
 
 (defn under-pos
   [state x y]

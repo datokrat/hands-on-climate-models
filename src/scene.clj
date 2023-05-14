@@ -1,4 +1,5 @@
-(ns scene)
+(ns scene
+  (:require item frame))
 
 (defn initial []
   {:items (sorted-map)
