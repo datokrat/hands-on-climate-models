@@ -54,15 +54,6 @@
       java.nio.file.Files/readAllBytes
       Image/makeFromEncoded))
 
-(def sprite-path-str
-  "/home/paul/Bilder/isosmile.png")
-
-(def sprite-path
-  (java.nio.file.Path/of sprite-path-str (into-array java.lang.String [])))
-
-(def sprite-bytes
-  (java.nio.file.Files/readAllBytes sprite-path))
-
 (def sun-sprite
   (str->sprite "./img/sun.png"))
 
