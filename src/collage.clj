@@ -81,5 +81,4 @@
              :hovered? (tool-hovered? under-pos :sun)}
             {:type :tool
              :tool :earth
-             :hovered? (tool-hovered? under-pos :earth)})
-      (property-editor/sprites state))))
+             :hovered? (tool-hovered? under-pos :earth)}))))

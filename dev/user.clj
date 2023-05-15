@@ -1,6 +1,6 @@
 (ns user
   (:require
-   state collage scene item text
+   state collage scene item text property-editor
    [clojure.math :as math]
    [nrepl.cmdline :as nrepl])
   (:use util)
@@ -136,7 +136,9 @@
       (case type
         :tool (def state (state/grab-tool state object x y))
         :item (def state (state/grab state object))
-        :property-editor nil)
+        :property-editor
+        (def state (or (property-editor/on-press state x y)
+                       state)))
       (def state (or (on-press-time-slider event)
                      (state/deselect state))))
        (request-frame)))

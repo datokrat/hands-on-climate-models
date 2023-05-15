@@ -18,6 +18,9 @@
   {:type :value
    :value value})
 
+(defn prop-type [property]
+  (:type property))
+
 ;; interface
 
 (defmulti in-range? (fn [item frame-data point] (type item)))

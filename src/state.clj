@@ -53,6 +53,8 @@ Variable editor state:
 (defn update-scene [state f]
   (set-scene state (f (get-scene state))))
 
+(defmulti editor state-type)
+
 (defmulti selection state-type)
 
 (defmulti can-abort-transaction? state-type)
@@ -139,10 +141,12 @@ Variable editor state:
   state)
 
 (defmethod start-dragging :scene [state id]
-  (assoc state
-         :type :dragging
-         :data {:scene (get-scene state)
-                :dragging id}))
+  (let [scene (get-scene state)]
+    (assoc state
+           :type :dragging
+           :data {:scene scene
+                  :dragging id
+                  :editor (editor-state/initial scene id)})))
 
 (defmethod mouse-moved-to-scene-pos :scene [state x y]
   state)
@@ -167,6 +171,9 @@ Variable editor state:
          :type :scene
          :data (get-scene state)))
 
+(defmethod editor :selection [state]
+  (get-in state [:data :editor]))
+
 (defmethod can-abort-transaction? :selection [state]
   true)
 
@@ -174,10 +181,15 @@ Variable editor state:
   state)
 
 (defmethod start-dragging :selection [state id]
-  (assoc state
-         :type :dragging
-         :data {:scene (get-scene state)
-                :dragging id}))
+  (let [scene (get-scene state)
+        new-editor (if (= id (selection state))
+                 (editor state)
+                 (editor-state/initial scene id))]
+    (assoc state
+           :type :dragging
+           :data {:scene scene
+                  :dragging id
+                  :editor new-editor})))
 
 (defmethod mouse-moved-to-scene-pos :selection [state x y]
   state)
@@ -194,6 +206,9 @@ Variable editor state:
   ;; TODO: What should happen if the selected item is removed?
   (assoc-in state [:data :scene] scene))
 
+(defmethod editor :dragging [state]
+  (get-in state [:data :editor]))
+
 (defmethod selection :dragging [state]
   (get-in state [:data :dragging]))
 
@@ -206,10 +221,13 @@ Variable editor state:
   true)
 
 (defmethod abort-transaction :dragging [state]
-  (assoc state
-         :type :selection
-         :data {:scene (get-scene state)
-                :selection (selection state)}))
+  (let [scene (get-scene state)
+        id (selection state)]
+    (assoc state
+           :type :selection
+           :data {:scene scene
+                  :selection id
+                  :editor (editor state)})))
 
 (defn clamp [x l u]
   (-> x (max l) (min u)))
