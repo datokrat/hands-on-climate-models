@@ -2,8 +2,6 @@
   (:require layout text scene frame editor-state)
   (:use util))
 
-;; state
-
 ;; layout
 
 (defn line [y n]
@@ -12,20 +10,6 @@
 (defn height []
   (* 3 layout/font-height))
 
-;; parsing
-
-(defmulti prop-expression item/prop-type)
-
-(defmethod prop-expression :value [item]
-  (str (:value item)))
-
-(defmethod prop-expression :variable [item]
-  (str "$" (:variable item)))
-
-(defn parse-prop-expression [string]
-  {:type :value
-   :value (double string)})
-
 ;; drawing
 
 (defn draw-tabbed [canvas x y l text]
@@ -33,7 +17,7 @@
                   {:pos {:x x :y (+ (line y l) layout/font-height)}
                    :text (str text)}))
 
-(defmulti draw (fn [canvas {:keys [scene id propkey]} state y] (edit-mode state)))
+(defmulti draw (fn [canvas {:keys [scene id propkey]} state y] (editor-state/edit-mode state)))
 
 (defn prop-desc [item]
   (case (item/type item)
@@ -46,7 +30,7 @@
         propframe (-> scene scene/get-frame frame/props)]
     (run! #(apply draw-tabbed canvas %)
           [[layout/tab1 y 0 (name propkey)]
-           [layout/tab2 y 0 (prop-expression prop)]
+           [layout/tab2 y 0 (editor-state/prop-expression prop)]
            [layout/tab3 y 0 (str "=> " (get-in propframe [id propkey]))]])))
 
 (defmethod draw :expression [canvas {:keys [scene id propkey]} state y]
@@ -57,7 +41,7 @@
 
 ;; input
 
-(defmulti on-press (fn [context state x y] (edit-mode state)))
+(defmulti on-press (fn [context state x y can-focus] (editor-state/edit-mode state)))
 
 (defn input-contains [x y]
   (println "input-contains" x y)
@@ -65,7 +49,6 @@
    (<= layout/tab2 x layout/tab3)
    (<= 0 y layout/font-height)))
 
-(defmethod on-press :nothing [{:keys [scene id propkey]} state x y]
-  (when (input-contains x y)
-    (println "contains")
+(defmethod on-press :nothing [{:keys [scene id propkey]} state x y can-focus]
+  (when (and can-focus (input-contains x y))
     {:property-editor (editor-state/editing-single-state "Hi")}))

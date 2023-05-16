@@ -1,5 +1,5 @@
 (ns state
-  (:require scene item rect))
+  (:require scene item rect editor-state))
 
 ;; some planning
 
@@ -66,6 +66,10 @@ Variable editor state:
 (defmulti create-and-drag-item (fn [state _ _ _] (state-type state)))
 
 (defmulti start-dragging (fn [state id] (state-type state)))
+
+(defmulti on-key (fn [state key] (state-type state)))
+
+(defmulti on-text (fn [state text] (state-type state)))
 
 (defn get-item [state id]
   (-> state get-scene (scene/get-item id)))
@@ -154,6 +158,12 @@ Variable editor state:
 (defmethod mouse-released :scene [state]
   state)
 
+(defmethod on-key :scene [state key]
+  state)
+
+(defmethod on-text :scene [state text]
+  state)
+
 ;; selection
 
 (defmethod get-scene :selection [state]
@@ -195,6 +205,9 @@ Variable editor state:
   state)
 
 (defmethod mouse-released :selection [state]
+  state)
+
+(defmethod on-key :selection [state key]
   state)
 
 ;; dragging
@@ -254,3 +267,66 @@ Variable editor state:
 
 (defmethod mouse-released :dragging [state]
   (abort-transaction state))
+
+(defmethod on-key :dragging [state key]
+  state)
+
+(defmethod on-text :dragging [state text]
+  state)
+
+;; editing
+
+(defn start-editing-property [state propkey]
+  (let [scene (state/get-scene state)
+        id (state/selection state)
+        editor (state/editor state)]
+    (assoc state
+           :type :editing-property
+           :data {:scene scene
+                  :selection id
+                  :editor (editor-state/edit-property scene id editor propkey)})))
+
+(defmethod get-scene :editing-property [state]
+  (get-in state [:data :scene]))
+
+(defmethod set-scene :editing-property [state value]
+  (assoc-in state [:data :scene] value))
+
+(defmethod selection :editing-property [state]
+  (get-in state [:data :selection]))
+
+(defmethod can-abort-transaction? :editing-property [state]
+  false)
+
+(defmethod mouse-moved-to-scene-pos :editing-property [state x y]
+  state)
+
+(defmethod mouse-released :editing-property [state]
+  state)
+
+(defmethod editor :editing-property [state]
+  (get-in state [:data :editor]))
+
+(defn finish-editing-property [state]
+  (-> state
+      (assoc :type :selection
+             :data {:scene (state/get-scene state)
+                    :selection (state/selection state)
+                    :editor (editor-state/initial (state/get-scene state) (state/selection state))})))
+
+(defn save-editing-property [state]
+  (let [str (get-in state [:data :editor :value])
+        propkey (get-in state [:data :editor :property])
+        parsed (editor-state/parse-prop-expression str)
+        id (state/selection state)]
+    (-> state
+        (update-in [:data :scene] #(scene/update-item % id (fn [item] (item/assoc-property item propkey parsed))))
+        finish-editing-property)))
+
+(defmethod on-key :editing-property [state k]
+  (case k
+    :backspace (update-in state [:data :editor] #(editor-state/backspace %))
+    :enter (save-editing-property state)))
+
+(defmethod on-text :editing-property [state text]
+  (update-in state [:data :editor] #(editor-state/text % text)))

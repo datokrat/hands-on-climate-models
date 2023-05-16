@@ -35,20 +35,31 @@
                :propkey propkey}
               editor-state
               x (- y (single-y i)))]
-    (cond-> state
-      property-editor (assoc-in [:data :editor :property-editors propkey] property-editor))))
+    (-> state
+        state/abort-transaction
+        state/start-editing (cond-> state
+          property-editor (assoc-in [:data :editor :property-editors propkey] property-editor)))))
+
+(defn is-edit-click [i x y]
+  (single-property-editor/input-contains x (+ layout/font-height (- y (single-y i)))))
+
+(defn property-to-edit [state x y]
+  (->> state
+       state/selected-item
+       item/properties
+       (keep-indexed (fn [i propkey] (when (is-edit-click i x y) propkey)))
+       first))
 
 (defn on-press [state x y]
-  (when (state/selection state)
-    (let [property-editors (-> state state/editor :property-editors)]
-      (or (some identity
-                 (map-indexed (fn [i propkey] (on-press-single
-                                               state
-                                               propkey i
-                                               (get property-editors propkey)
-                                               x y))
-                              (-> state state/selected-item item/properties)))
-          state))))
+  (when (and (state/can-abort-transaction? state) (state/selection state))
+    (println x y)
+    (let [selection (state/selection state)
+          property-editors (-> state state/editor :property-editors)
+          edit-property (property-to-edit state x y)]
+      (when edit-property
+        (-> state
+            state/abort-transaction
+            (state/start-editing-property edit-property))))))
 
 (defn draw-tabbed [canvas x y l text]
   (text/draw-text canvas
@@ -69,15 +80,44 @@
       (draw-variable canvas @y name value (get varframe name))
       (var-set y (+ @y 20)))))
 
-(defn draw-properties [canvas scene id editor-state]
-  (let [property-editors (:property-editors editor-state)]
-    (doseqi i [propkey (-> scene (scene/get-item id) item/properties)]
-            (single-property-editor/draw canvas
-                                         {:scene scene
-                                          :id id
-                                          :propkey propkey}
-                                         (get property-editors propkey)
-                                         (single-y i)))))
+(defn draw-single-readonly [canvas state i propkey]
+  (let [id (state/selection state)
+        item (state/selected-item state)
+        prop (-> item (item/get-property propkey))
+        propframe (-> state state/get-scene scene/get-frame frame/props)
+        y (single-y i)]
+    (run! #(apply draw-tabbed canvas %)
+          [[layout/tab1 y 0 (name propkey)]
+           [layout/tab2 y 0 (single-property-editor/prop-expression prop)]
+           [layout/tab3 y 0 (str "=> " (get-in propframe [id propkey]))]])))
+
+(defn draw-single-editing-property [canvas state i propkey]
+  (let [value (-> state state/editor :value)
+        y (single-y i)]
+    (run! #(apply draw-tabbed canvas %)
+          [[layout/tab1 y 0 (name propkey)]
+           [layout/tab2 y 0 value]])))
+
+(defn draw-single [canvas state i propkey]
+  (let [editor (state/editor state)]
+    (case (:type editor)
+      :show (draw-single-readonly canvas state i propkey)
+      :property (if (= (:property editor) propkey)
+                  (draw-single-editing-property canvas state i propkey)
+                  (draw-single-readonly canvas state i propkey)))))
+
+(defn draw-properties [canvas state]
+  (let [properties (-> state state/selected-item item/properties)]
+    (doseqi i [propkey properties]
+            (draw-single canvas state i propkey)))
+  (comment (let [property-editors (:property-editors editor-state)]
+     (doseqi i [propkey (-> scene (scene/get-item id) item/properties)]
+             (single-property-editor/draw canvas
+                                          {:scene scene
+                                           :id id
+                                           :propkey propkey}
+                                          (get property-editors propkey)
+                                          (single-y i))))))
 
 (defn draw-property-editor
   [canvas state]
@@ -88,5 +128,5 @@
         varframe (frame/variable-values frame)
         y 20]
     (when (state/selection state)
-      (draw-properties canvas scene (state/selection state) (state/editor state)))
+      (draw-properties canvas state))
     (draw-variables canvas variables varframe)))

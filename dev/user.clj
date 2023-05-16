@@ -6,7 +6,7 @@
   (:use util)
   (:import
    [io.github.humbleui.types Rect]
-   [io.github.humbleui.jwm App EventMouseMove EventMouseButton]
+   [io.github.humbleui.jwm App EventMouseMove EventMouseButton EventKey Key EventTextInput]
    [io.github.humbleui.skija Image FontMgr Font FontStyle Paint]
    [io.github.humbleui.jwm.skija EventFrameSkija LayerGLSkija]
    [java.util.function Consumer]))
@@ -141,7 +141,7 @@
                        state)))
       (def state (or (on-press-time-slider event)
                      (state/deselect state))))
-       (request-frame)))
+    (request-frame)))
 
 (defn on-release
   [event]
@@ -154,12 +154,29 @@
     (on-press event)
     (on-release event)))
 
+(defn on-key
+  [event]
+  (when (.isPressed event)
+    (when (= (.getKey event) Key/BACKSPACE)
+      (def state (state/on-key state :backspace))
+      (request-frame))
+    (when (= (.getKey event) Key/ENTER)
+      (def state (state/on-key state :enter))
+      (request-frame))))
+
+(defn on-text
+  [event]
+  (def state (state/on-text state (.getText event)))
+  (request-frame))
+
 (defn on-event
   [event]
   (condp instance? event
     EventFrameSkija (on-paint event)
     EventMouseMove (on-move event)
     EventMouseButton (on-button event)
+    EventKey (on-key event)
+    EventTextInput (on-text event)
     nil))
 
 (defn listener
