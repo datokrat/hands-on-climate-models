@@ -39,18 +39,19 @@
        :initial 0
        :change layout/font-height)))
 
-(defn on-press-single [state propkey i editor-state x y]
-  (when-let [{:keys [property-editor]}
-             (single-property-editor/on-press
-              {:scene (state/get-scene state)
-               :id (state/selection state)
-               :propkey propkey}
-              editor-state
-              x (- y (single-y i)))]
-    (-> state
-        state/abort-transaction
-        state/start-editing (cond-> state
-                              property-editor (assoc-in [:data :editor :property-editors propkey] property-editor)))))
+(comment (defn on-press-single [state propkey i editor-state x y]
+   (when-let [{:keys [property-editor]}
+              (single-property-editor/on-press
+               {:scene (state/get-scene state)
+                :id (state/selection state)
+                :propkey propkey}
+               editor-state
+               x (- y (single-y i)))]
+     (-> state
+         state/abort-transaction
+         state/start-editing
+         (cond->
+             property-editor (assoc-in [:data :editor :property-editors propkey] property-editor))))))
 
 (defn is-edit-click [field-y x y]
   (single-property-editor/input-contains x (+ layout/font-height (- y field-y))))
@@ -87,11 +88,12 @@
   (->> state
        state/get-scene
        scene/get-variables
-       first
+       keys
        (keep-indexed (fn [i name] (when (is-name-click (single-var-y i) x y) name)))
        first))
 
 (defn on-press [state x y]
+  (println "on-press" x y)
   (when (and (state/can-abort-transaction? state) (state/selection state))
     (let [selection (state/selection state)]
       (or
@@ -104,10 +106,12 @@
              state/abort-transaction
              (state/start-editing-variable edit-variable)))
        (when-let [toggle-variable (variable-to-toggle state x y)]
+         (println "toggle" x y toggle-variable)
          (-> state
              state/abort-transaction
              (state/toggle-variable toggle-variable)))
        (when (should-create-variable? state x y)
+         (println "create")
          (-> state
              state/abort-transaction
              state/start-creating-variable))))))
@@ -202,7 +206,7 @@
         y (single-y i)]
     (run! #(apply draw-tabbed canvas %)
           [[layout/tab1 y 0 (name propkey)]
-           [layout/tab2 y 0 (single-property-editor/prop-expression prop)]
+           [layout/tab2 y 0 (editor-state/prop-expression prop)]
            [layout/tab3 y 0 (str "=> " (get-in propframe [id propkey]))]])))
 
 (defn draw-single-editing-property [canvas state i propkey]

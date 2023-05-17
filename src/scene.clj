@@ -13,26 +13,33 @@
 (defn get-variables [scene]
   (:variables scene))
 
-(defn eval-initial-variable [name variable]
-  (case (:type variable)
-    :dependent (:value variable)
-    :differential (:initial variable)))
+(defn eval-initial-variable [name variables]
+  (let [variable (get variables name)]
+    (case (:type variable)
+      :dependent ((variable/parse-variable-line (:value variable))
+                  (fn [name] (eval-initial-variable name variables)))
+      :differential (Double. (:initial variable)))))
 
-(defn eval-consecutive-variable [last-value name variable]
-  (case (:type variable)
-    :dependent (:value variable)
-    :differential (+ last-value (:change variable))))
+(defn eval-consecutive-variable [last-varframe name variables]
+  (let [variable (get variables name)
+        last-value (get last-varframe name)]
+    (case (:type variable)
+      :dependent ((variable/parse-variable-line (:value variable))
+                  (fn [name] (eval-consecutive-variable last-varframe name variables)))
+      :differential (+ last-value
+                       ((variable/parse-variable-line (:change variable))
+                        (fn [name] (get last-varframe name)))))))
 
 (defn get-initial-varframe [scene]
   (->> scene get-variables
          (map (fn [[name variable]]
-                [name (eval-initial-variable name variable)]))
+                [name (eval-initial-variable name (get-variables scene))]))
          (into (sorted-map))))
 
 (defn get-next-varframe [scene frame]
   (->> scene get-variables
        (map (fn [[name variable]]
-              [name (eval-consecutive-variable (get frame name) name variable)]))
+              [name (eval-consecutive-variable frame  name (get-variables scene))]))
        (into (sorted-map))))
 
 (defn get-varframe-at [scene t]

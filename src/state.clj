@@ -38,9 +38,11 @@ Variable editor state:
   (rect/ltrb 0 100 800 600))
 
 (defn initial []
-  {:type :scene
-   :data (scene/initial)
-   :mouse {:x 0 :y 0}})
+  (let [scene (scene/initial)]
+    {:type :scene
+     :data {:scene scene
+            :editor (editor-state/initial scene nil)}
+     :mouse {:x 0 :y 0}}))
 
 (defn state-type [state]
   (:type state))
@@ -128,10 +130,10 @@ Variable editor state:
 ;; scene
 
 (defmethod get-scene :scene [state]
-  (:data state))
+  (get-in state [:data :scene]))
 
 (defmethod set-scene :scene [state scene]
-  (assoc state :data scene))
+  (assoc-in state [:data :scene] scene))
 
 (defmethod selection :scene [state]
   nil)
@@ -144,6 +146,9 @@ Variable editor state:
 
 (defmethod abort-transaction :scene [state]
   state)
+
+(defmethod editor :scene [state]
+  (get-in state [:data :editor]))
 
 (defmethod start-dragging :scene [state id]
   (let [scene (get-scene state)]
@@ -180,7 +185,8 @@ Variable editor state:
 (defmethod deselect :selection [state]
   (assoc state
          :type :scene
-         :data (get-scene state)))
+         :data {:scene (get-scene state)
+                :editor (state/editor state)}))
 
 (defmethod editor :selection [state]
   (get-in state [:data :editor]))
@@ -229,7 +235,8 @@ Variable editor state:
 (defmethod selection :deselect [state]
   (assoc state
          :type :scene
-         :data (get-scene state)))
+         :data {:scene (get-scene state)
+                :editor (editor state)}))
 
 (defmethod can-abort-transaction? :dragging [state]
   true)
@@ -349,17 +356,16 @@ Variable editor state:
 
 (defn save-editing-variable [state]
   (let [str (get-in state [:data :editor :value])
-        [kind name] (get-in state [:data :editor :variable])
-        parsed (Double. str)]
+        [kind name] (get-in state [:data :editor :variable])]
     (-> state
-        (update-in [:data :scene] #(scene/update-variable % name (fn [var] (variable/set-variable-line var kind parsed))))
+        (update-in [:data :scene] #(scene/update-variable % name (fn [var] (variable/set-variable-line var kind str))))
         finish-editing-property)))
 
 (defn confirm-new-variable-name [state]
   (let [editor (state/editor state)
         name (:value editor)]
     (-> state
-        (assoc-in [:data :scene :variables name] (variable/make 0.0))
+        (assoc-in [:data :scene :variables name] (variable/make "0"))
         finish-editing-property)))
 
 (defmethod on-key :editing-property [state k]
