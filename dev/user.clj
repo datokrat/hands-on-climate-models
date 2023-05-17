@@ -126,7 +126,9 @@
 
 (defn on-press-time-slider [event]
   (when (.contains (rect/ltrb 100 650 600 660) (.getX event) (.getY event))
-    (state/update-scene state #(scene/set-time % (math/floor-div (- (.getX event) 100) 50)))))
+    (-> state
+        (state/update-scene #(scene/set-time % (math/floor-div (- (.getX event) 100) 50)))
+        state/try-grab-slider)))
 
 (defn on-press
   [event]

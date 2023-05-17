@@ -1,5 +1,6 @@
 (ns state
-  (:require scene item rect editor-state)
+  (:require scene item rect editor-state
+            [clojure.math :as math])
   (:use util))
 
 ;; some planning
@@ -126,6 +127,13 @@ Variable editor state:
   (-> state
       (assoc :mouse {:x x :y y})
       (mouse-moved-to-scene-pos x y)))
+
+(defn try-grab-slider [state]
+  (when (can-abort-transaction? state)
+    (assoc state
+           :type :slider
+           :data {:scene (get-scene state)
+                  :editor (editor state)})))
 
 ;; scene
 
@@ -385,3 +393,23 @@ Variable editor state:
 
 (defmethods on-text [:editing-property, :editing-variable, :creating-variable] [state text]
   (update-in state [:data :editor] #(editor-state/text % text)))
+
+;; slider
+
+(defmethod get-scene :slider [state]
+  (get-in state [:data :scene]))
+
+(defmethod editor :slider [state]
+  (get-in state [:data :editor]))
+
+(defmethod selection :slider [state]
+  nil)
+
+(defmethod mouse-released :slider [state]
+  (assoc state
+         :type :scene
+         :data {:scene (get-scene state)
+                :editor (editor state)}))
+
+(defmethod mouse-moved-to-scene-pos :slider [state x y]
+  (update-in state [:data :scene] #(scene/set-time % (math/floor-div (- x 100) 50))))
