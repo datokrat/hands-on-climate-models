@@ -44,7 +44,6 @@
 (defmulti on-press (fn [context state x y can-focus] (editor-state/edit-mode state)))
 
 (defn input-contains [x y]
-  (println "input-contains" x y)
   (and
    (<= layout/tab2 x layout/tab3)
    (<= 0 y layout/font-height)))

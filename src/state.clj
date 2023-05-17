@@ -1,5 +1,6 @@
 (ns state
-  (:require scene item rect editor-state))
+  (:require scene item rect editor-state)
+  (:use util))
 
 ;; some planning
 
@@ -286,25 +287,48 @@ Variable editor state:
                   :selection id
                   :editor (editor-state/edit-property scene id editor propkey)})))
 
-(defmethod get-scene :editing-property [state]
+(defn start-editing-variable [state name]
+  (let [scene (state/get-scene state)
+        id (state/selection state)
+        editor (state/editor state)]
+    (assoc state
+           :type :editing-variable
+           :data {:scene scene
+                  :selection id
+                  :editor (editor-state/edit-variable scene id editor name)})))
+
+(defn toggle-variable [state name]
+  (state/update-scene state (fn [scene] (scene/update-variable scene name variable/toggle))))
+
+(defn start-creating-variable [state]
+  (let [scene (state/get-scene state)
+        id (state/selection state)
+        editor (state/editor state)]
+    (assoc state
+           :type :creating-variable
+           :data {:scene scene
+                  :selection id
+                  :editor (editor-state/create-variable scene id editor)})))
+
+(defmethods get-scene [:editing-property, :editing-variable, :creating-variable] [state]
   (get-in state [:data :scene]))
 
-(defmethod set-scene :editing-property [state value]
+(defmethods set-scene [:editing-property, :editing-variable, :creating-variable] [state value]
   (assoc-in state [:data :scene] value))
 
-(defmethod selection :editing-property [state]
+(defmethods selection [:editing-property, :editing-variable, :creating-variable] [state]
   (get-in state [:data :selection]))
 
-(defmethod can-abort-transaction? :editing-property [state]
+(defmethods can-abort-transaction? [:editing-property, :editing-variable, :creating-variable] [state]
   false)
 
-(defmethod mouse-moved-to-scene-pos :editing-property [state x y]
+(defmethods mouse-moved-to-scene-pos [:editing-property, :editing-variable, :creating-variable] [state x y]
   state)
 
-(defmethod mouse-released :editing-property [state]
+(defmethods mouse-released [:editing-property, :editing-variable, :creating-variable] [state]
   state)
 
-(defmethod editor :editing-property [state]
+(defmethods editor [:editing-property, :editing-variable, :creating-variable] [state]
   (get-in state [:data :editor]))
 
 (defn finish-editing-property [state]
@@ -323,10 +347,35 @@ Variable editor state:
         (update-in [:data :scene] #(scene/update-item % id (fn [item] (item/assoc-property item propkey parsed))))
         finish-editing-property)))
 
+(defn save-editing-variable [state]
+  (let [str (get-in state [:data :editor :value])
+        [kind name] (get-in state [:data :editor :variable])
+        parsed (Double. str)]
+    (-> state
+        (update-in [:data :scene] #(scene/update-variable % name (fn [var] (variable/set-variable-line var kind parsed))))
+        finish-editing-property)))
+
+(defn confirm-new-variable-name [state]
+  (let [editor (state/editor state)
+        name (:value editor)]
+    (-> state
+        (assoc-in [:data :scene :variables name] (variable/make 0.0))
+        finish-editing-property)))
+
 (defmethod on-key :editing-property [state k]
   (case k
     :backspace (update-in state [:data :editor] #(editor-state/backspace %))
     :enter (save-editing-property state)))
 
-(defmethod on-text :editing-property [state text]
+(defmethod on-key :editing-variable [state k]
+  (case k
+    :backspace (update-in state [:data :editor] #(editor-state/backspace %))
+    :enter (save-editing-variable state)))
+
+(defmethod on-key :creating-variable [state k]
+  (case k
+    :backspace (update-in state [:data :editor] #(editor-state/backspace %))
+    :enter (confirm-new-variable-name state)))
+
+(defmethods on-text [:editing-property, :editing-variable, :creating-variable] [state text]
   (update-in state [:data :editor] #(editor-state/text % text)))

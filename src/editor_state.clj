@@ -44,16 +44,22 @@
    :property propkey
    :value "Hi"})
 
+(defn edit-variable [scene id state name]
+  {:type :variable
+   :variable name
+   :value "Hi"})
+
+(defn create-variable [scene id state]
+  {:type :create-variable
+   :value "Hi"})
+
 (defn delete-last-char [str]
   (if (> (count str) 0)
     (subs str 0 (-> str count dec))
     str))
 
 (defn backspace [editor-state]
-  (if (= (:type editor-state) :property)
-    (update editor-state :value delete-last-char)
-    editor-state))
+  (update editor-state :value delete-last-char))
 
 (defn text [editor-state text]
-  (if (= (:type editor-state) :property)
-    (update editor-state :value #(str % text))))
+  (update editor-state :value #(str % text)))
