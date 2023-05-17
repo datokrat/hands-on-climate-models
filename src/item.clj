@@ -36,6 +36,29 @@
 
 (defmulti assoc-property (fn [item key value] (type item)))
 
+;; arrow
+
+(defn arrow [x y thickness]
+  [:arrow {:x x :y y :thickness thickness}])
+
+(defmethod bounding-box :arrow [item frame-data]
+  (let [t (:thickness frame-data)]
+    (println "bounding-box" frame-data)
+    (rect/offset (rect/ltrb -100 (- t) 100 t) (:x frame-data) (:y frame-data))))
+
+(defmethod in-range? :arrow [item frame-data point]
+  (.contains (bounding-box item frame-data) (:x point) (:y point)))
+
+(defmethod properties-for-type :arrow [_]
+  [:x :y :thickness])
+
+(defmethod get-property :arrow [item k]
+  (println "get-property" item k)
+  (get-in item [1 k]))
+
+(defmethod assoc-property :arrow [item k value]
+  (assoc-in item [1 k] value))
+
 ;; sun, earth
 
 (def celestials [:sun, :earth])

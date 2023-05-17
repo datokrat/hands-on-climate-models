@@ -6,7 +6,7 @@
    [io.github.humbleui.types Rect]))
 
 (def tools
-  [:sun :earth])
+  [:sun :earth :arrow])
 
 (defn item-rect
   [state id]
@@ -17,12 +17,15 @@
 (defn tool-offset [tool]
   (case tool
     :sun [50 50]
-    :earth [150 50]))
+    :earth [150 50]
+    :arrow [250 50]))
 
 (defn tool-rect-scaled [tool scale]
-  (as-> (rect/centered-square 100) $
-    (rect/scale $ scale)
-    (apply rect/offset $ (tool-offset tool))))
+  (case tool
+    :arrow (rect/ltrb 200 25 300 75)
+    (as-> (rect/centered-square 100) $
+      (rect/scale $ scale)
+      (apply rect/offset $ (tool-offset tool)))))
 
 (defn tool-rect [tool]
   (tool-rect-scaled tool 1))
@@ -32,7 +35,7 @@
   (let [propframe (-> state state/get-scene scene/get-frame frame/props)]
     (->> propframe reverse keys
          (filter #(-> state (state/get-item %)
-                      (item/in-range? {:x x :y y} (get propframe %))))
+                      (item/in-range? (get propframe %) {:x x :y y})))
          first)))
 
 (defn tool-under-pos
@@ -81,4 +84,7 @@
              :hovered? (tool-hovered? under-pos :sun)}
             {:type :tool
              :tool :earth
-             :hovered? (tool-hovered? under-pos :earth)}))))
+             :hovered? (tool-hovered? under-pos :earth)}
+            {:type :tool
+             :tool :arrow
+             :hovered? (tool-hovered? under-pos :arrow)}))))

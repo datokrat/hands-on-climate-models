@@ -48,6 +48,7 @@
       (nth t)))
 
 (defn eval-prop [prop varframe]
+  (println "eval" prop)
   (case (:type prop)
     :value (:value prop)
     :variable (get varframe (:variable prop))))
@@ -55,9 +56,8 @@
 (defn get-propframe-at [scene t varframe]
   (->> scene get-items
        (map (fn [[id item]]
-              [id {:x (eval-prop (item/get-x item) varframe)
-                   :y (eval-prop (item/get-y item) varframe)
-                   :radius (eval-prop (item/radius item) varframe)}]))
+              [id (->> item item/properties (map (fn [k] [k (eval-prop (item/get-property item k) varframe)]))
+                      (into {}))]))
        (into (sorted-map))))
 
 (defn get-frame-at [scene t]

@@ -43,10 +43,17 @@
           name2 (nth matches 2)]
       (fn [context-fn] (- (context-fn name1) (context-fn name2))))))
 
+(defn parse-formula3 [str]
+  (when-let [matches (re-matches #"(\d+(.\d+)?) \* \$(\w+)" str)]
+    (let [factor (second matches)
+          name (nth matches 3)]
+      (fn [context-fn] (* (Double. factor) (context-fn name))))))
 
 (defn parse-variable-line [str]
   (or (parse-number str)
       (parse-formula str)
-      (parse-formula2 str)))
+      (parse-formula2 str)
+      (parse-formula3 str)
+      (throw (Exception. "couldn't parse"))))
 
 ;; ideas: derivatives, expressions with data flow engine

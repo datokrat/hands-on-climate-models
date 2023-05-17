@@ -60,6 +60,9 @@
 (def earth-sprite
   (str->sprite "./img/earth.png"))
 
+(def arrow-sprite
+  (str->sprite "./img/arrow-right.png"))
+
 (def state
   (state/initial))
 
@@ -69,7 +72,8 @@
 (defn type->sprite [type]
   (case type
     :sun sun-sprite
-    :earth earth-sprite))
+    :earth earth-sprite
+    :arrow arrow-sprite))
 
 (defn draw-toolbar
   [canvas tool hovered?]
@@ -85,6 +89,10 @@
 (defmethod draw-item :earth
   [canvas item hovered? frame-data]
   (.drawImageRect canvas earth-sprite (item/bounding-box item frame-data)))
+
+(defmethod draw-item :arrow
+  [canvas item hovered? frame-data]
+  (.drawImageRect canvas arrow-sprite (item/bounding-box item frame-data)))
 
 (defn draw-object
   [canvas object frame]
