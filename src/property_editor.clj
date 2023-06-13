@@ -192,7 +192,7 @@
     (run! #(apply draw-tabbed canvas %)
           [[layout/tab1 y 0 (name propkey)]
            [layout/tab2 y 0 (editor-state/prop-expression prop)]
-           [layout/tab3 y 0 (str "=> " (get-in propframe [id propkey]))]])))
+           [layout/tab3 y 0 (str " => " (get-in propframe [id propkey]))]])))
 
 (defn draw-single-editing-property [canvas state i propkey]
   (let [value (-> state state/editor :value)

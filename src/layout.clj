@@ -6,5 +6,5 @@
 
 (def tab1 820)
 (def tab2 970)
-(def tab3 1300)
+(def tab3 1100)
 (def editor-right 1500)
