@@ -28,7 +28,7 @@
     :differential (make "0")))
 
 (defn parse-number [str]
-  (when (re-matches #"\d+(.\d+)?" str)
+  (when (re-matches #"-?\d+(.\d+)?" str)
     (let [value (Double. str)]
       (fn [context-fn] value))))
 

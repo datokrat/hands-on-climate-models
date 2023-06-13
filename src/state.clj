@@ -92,8 +92,11 @@ Variable editor state:
 (defmethod make-item :earth [_ x y]
   (item/earth (item/value x) (item/value y) (item/value 75)))
 
-(defmethod make-item :arrow [_ x y]
-  (item/arrow (item/value x) (item/value y) (item/value 25)))
+(defmethod make-item :arrow-right [_ x y]
+  (item/arrow (item/value x) (item/value y) (item/value 25) :right))
+
+(defmethod make-item :arrow-left [_ x y]
+  (item/arrow (item/value x) (item/value y) (item/value 25) :left))
 
 (defmulti mouse-moved-to-scene-pos (fn [state x y] (state-type state)))
 

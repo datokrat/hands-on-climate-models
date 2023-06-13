@@ -6,7 +6,7 @@
    [io.github.humbleui.types Rect]))
 
 (def tools
-  [:sun :earth :arrow])
+  [:sun :earth :arrow-right :arrow-left])
 
 (defn item-rect
   [state id]
@@ -18,11 +18,13 @@
   (case tool
     :sun [50 50]
     :earth [150 50]
-    :arrow [250 50]))
+    :arrow-right [250 50]
+    :arrow-left [350 50]))
 
 (defn tool-rect-scaled [tool scale]
   (case tool
-    :arrow (rect/ltrb 200 25 300 75)
+    :arrow-right (rect/ltrb 200 25 300 75)
+    :arrow-left (rect/ltrb 300 25 400 75)
     (as-> (rect/centered-square 100) $
       (rect/scale $ scale)
       (apply rect/offset $ (tool-offset tool)))))
@@ -86,5 +88,8 @@
              :tool :earth
              :hovered? (tool-hovered? under-pos :earth)}
             {:type :tool
-             :tool :arrow
-             :hovered? (tool-hovered? under-pos :arrow)}))))
+             :tool :arrow-right
+             :hovered? (tool-hovered? under-pos :arrow-right)}
+            {:type :tool
+             :tool :arrow-left
+             :hovered? (tool-hovered? under-pos :arrow-left)}))))

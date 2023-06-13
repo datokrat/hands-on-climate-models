@@ -39,20 +39,6 @@
        :initial 0
        :change layout/font-height)))
 
-(comment (defn on-press-single [state propkey i editor-state x y]
-   (when-let [{:keys [property-editor]}
-              (single-property-editor/on-press
-               {:scene (state/get-scene state)
-                :id (state/selection state)
-                :propkey propkey}
-               editor-state
-               x (- y (single-y i)))]
-     (-> state
-         state/abort-transaction
-         state/start-editing
-         (cond->
-             property-editor (assoc-in [:data :editor :property-editors propkey] property-editor))))))
-
 (defn is-edit-click [field-y x y]
   (single-property-editor/input-contains x (+ layout/font-height (- y field-y))))
 
@@ -82,7 +68,7 @@
 (defn should-create-variable? [state x y]
   (let [button-y (-> state state/get-scene scene/get-variables count single-var-y)]
     (and (<= x layout/tab2)
-         (<= button-y y (+ button-y layout/font-height)))))
+         (<= (- button-y layout/font-height) y button-y))))
 
 (defn variable-to-toggle [state x y]
   (->> state
@@ -93,7 +79,6 @@
        first))
 
 (defn on-press [state x y]
-  (println "on-press" x y)
   (when (and (state/can-abort-transaction? state) (state/selection state))
     (let [selection (state/selection state)]
       (or

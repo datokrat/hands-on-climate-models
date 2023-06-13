@@ -48,7 +48,6 @@
       (nth t)))
 
 (defn eval-prop [prop varframe]
-  (println "eval" prop)
   (case (:type prop)
     :value (:value prop)
     :variable (get varframe (:variable prop))))
@@ -121,7 +120,8 @@
   (:time scene))
 
 (defn set-time [scene t]
-  (assoc scene :time t))
+  (assoc scene :time
+         (max 0 (min 10 t))))
 
 (defn is-at-start [scene]
   (-> scene get-time (= 0)))

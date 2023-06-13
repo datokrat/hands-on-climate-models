@@ -38,12 +38,11 @@
 
 ;; arrow
 
-(defn arrow [x y thickness]
-  [:arrow {:x x :y y :thickness thickness}])
+(defn arrow [x y thickness orientation]
+  [:arrow {:x x :y y :thickness thickness :orientation orientation}])
 
 (defmethod bounding-box :arrow [item frame-data]
   (let [t (:thickness frame-data)]
-    (println "bounding-box" frame-data)
     (rect/offset (rect/ltrb -100 (- t) 100 t) (:x frame-data) (:y frame-data))))
 
 (defmethod in-range? :arrow [item frame-data point]
@@ -53,11 +52,13 @@
   [:x :y :thickness])
 
 (defmethod get-property :arrow [item k]
-  (println "get-property" item k)
   (get-in item [1 k]))
 
 (defmethod assoc-property :arrow [item k value]
   (assoc-in item [1 k] value))
+
+(defn orientation [item]
+  (get-in item [1 :orientation]))
 
 ;; sun, earth
 
@@ -85,7 +86,7 @@
   {:x (get-x item)
    :y (get-y item)})
 
-(defmethods in-range? celestials [item point frame-data]
+(defmethods in-range? celestials [item frame-data point]
   (let [sqdist (square-distance frame-data point)
         item-radius (:radius frame-data)]
     (<= sqdist (* item-radius item-radius))))
