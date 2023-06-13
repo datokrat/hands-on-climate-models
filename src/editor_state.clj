@@ -42,16 +42,16 @@
 (defn edit-property [scene id state propkey]
   {:type :property
    :property propkey
-   :value "Hi"})
+   :value ""})
 
 (defn edit-variable [scene id state name]
   {:type :variable
    :variable name
-   :value "Hi"})
+   :value ""})
 
 (defn create-variable [scene id state]
   {:type :create-variable
-   :value "Hi"})
+   :value ""})
 
 (defn delete-last-char [str]
   (if (> (count str) 0)

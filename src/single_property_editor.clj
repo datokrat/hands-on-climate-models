@@ -50,4 +50,4 @@
 
 (defmethod on-press :nothing [{:keys [scene id propkey]} state x y can-focus]
   (when (and can-focus (input-contains x y))
-    {:property-editor (editor-state/editing-single-state "Hi")}))
+    {:property-editor (editor-state/editing-single-state "")}))

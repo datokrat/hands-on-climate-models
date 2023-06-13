@@ -139,6 +139,7 @@ Variable editor state:
     (assoc state
            :type :slider
            :data {:scene (get-scene state)
+                  :selection (selection state)
                   :editor (editor state)})))
 
 ;; scene
@@ -409,13 +410,19 @@ Variable editor state:
   (get-in state [:data :editor]))
 
 (defmethod selection :slider [state]
-  nil)
+  (get-in state [:data :selection]))
 
 (defmethod mouse-released :slider [state]
-  (assoc state
-         :type :scene
-         :data {:scene (get-scene state)
-                :editor (editor state)}))
+  (if (selection state)
+    (assoc state
+           :type :selection
+           :data {:scene (get-scene state)
+                  :selection (selection state)
+                  :editor (editor state)})
+    (assoc state
+           :type :scene
+           :data {:scene (get-scene state)
+                  :editor (editor state)})))
 
 (defmethod mouse-moved-to-scene-pos :slider [state x y]
   (update-in state [:data :scene] #(scene/set-time % (math/floor-div (- x 100) 50))))

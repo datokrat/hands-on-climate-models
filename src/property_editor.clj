@@ -175,7 +175,7 @@
       (run! #(apply draw-tabbed canvas %)
             [[layout/tab1 y 0 (:value editor)]])
       (run! #(apply draw-tabbed canvas %)
-            [[layout/tab1 y 0 "new"]]))))
+            [[layout/tab1 y 0 "[New variable]"]]))))
 
 (defn draw-variables
   [canvas state variables varframe]
